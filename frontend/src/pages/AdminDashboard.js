@@ -13,9 +13,15 @@ const AdminDashboard = () => {
   const [editRoom, setEditRoom] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+  const [filterPropertyType, setFilterPropertyType] = useState('all');
+  const [selectedPropertyType, setSelectedPropertyType] = useState('rent');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
   const imagesInputRef = useRef();
   const [imagePreviews, setImagePreviews] = useState([]);
+
+  const propertyType = watch('propertyType', 'rent');
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -47,15 +53,18 @@ const AdminDashboard = () => {
     navigate('/admin/login');
   };
 
-  const openAddModal = () => {
+  const openAddModal = (type) => {
     setEditRoom(null);
+    setSelectedPropertyType(type);
     reset();
     setImagePreviews([]);
+    setValue('propertyType', type);
     setShowModal(true);
   };
 
   const openEditModal = (room) => {
     setEditRoom(room);
+    setSelectedPropertyType(room.propertyType || 'rent');
     // Set form values, handling null values properly
     Object.entries(room).forEach(([key, value]) => {
       if (key !== 'images') {
@@ -63,6 +72,8 @@ const AdminDashboard = () => {
         setValue(key, value || '');
       }
     });
+    // Set the correct property type
+    setValue('propertyType', room.propertyType || 'rent');
     setImagePreviews([]);
     setShowModal(true);
   };
@@ -93,6 +104,13 @@ const AdminDashboard = () => {
           }
         }
       });
+      
+      // Ensure only the correct price/rent field is sent based on property type
+      if (data.propertyType === 'sale') {
+        formData.delete('rent'); // Remove rent field for sale properties
+      } else if (data.propertyType === 'rent') {
+        formData.delete('price'); // Remove price field for rent properties
+      }
 
       if (editRoom) {
         // Update existing room
@@ -104,7 +122,7 @@ const AdminDashboard = () => {
         });
         
         if (response.status === 200) {
-          toast.success('Room updated successfully!');
+          toast.success('Property updated successfully!');
           setShowModal(false);
           reset();
           setEditRoom(null);
@@ -123,7 +141,7 @@ const AdminDashboard = () => {
         });
         
         if (response.status === 201) {
-          toast.success('Room added successfully!');
+          toast.success('Property added successfully!');
           setShowModal(false);
           reset();
           setEditRoom(null);
@@ -134,8 +152,8 @@ const AdminDashboard = () => {
         }
       }
     } catch (err) {
-      console.error('Error saving room:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to save room. Please try again.';
+      console.error('Error saving property:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to save property. Please try again.';
       toast.error(errorMessage);
     } finally {
       setSubmitLoading(false);
@@ -143,7 +161,7 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = async (roomId) => {
-    if (!window.confirm('Are you sure you want to delete this room?')) return;
+    if (!window.confirm('Are you sure you want to delete this property?')) return;
     
     const token = localStorage.getItem('adminToken');
     try {
@@ -152,21 +170,27 @@ const AdminDashboard = () => {
       });
       
       if (response.status === 200) {
-        toast.success('Room deleted successfully!');
+        toast.success('Property deleted successfully!');
         fetchRooms(token);
       } else {
         throw new Error('Delete failed');
       }
     } catch (err) {
-      console.error('Error deleting room:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to delete room';
+      console.error('Error deleting property:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to delete property';
       toast.error(errorMessage);
     }
   };
 
   const handleToggleStatus = async (room) => {
     const token = localStorage.getItem('adminToken');
-    const newStatus = room.status === 'rented' ? 'available' : 'rented';
+    let newStatus;
+    
+    if (room.propertyType === 'sale') {
+      newStatus = room.status === 'sold' ? 'available' : 'sold';
+    } else {
+      newStatus = room.status === 'rented' ? 'available' : 'rented';
+    }
     
     try {
       const response = await axios.put(`http://localhost:8000/api/rooms/${room._id}`, 
@@ -180,14 +204,14 @@ const AdminDashboard = () => {
       );
       
       if (response.status === 200) {
-        toast.success(`Room marked as ${newStatus}!`);
+        toast.success(`Property marked as ${newStatus}!`);
         fetchRooms(token);
       } else {
         throw new Error('Status update failed');
       }
     } catch (err) {
-      console.error('Error updating room status:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to update room status';
+      console.error('Error updating property status:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to update property status';
       toast.error(errorMessage);
     }
   };
@@ -196,6 +220,48 @@ const AdminDashboard = () => {
     const files = Array.from(e.target.files);
     setValue('images', files);
     setImagePreviews(files.map(file => URL.createObjectURL(file)));
+  };
+
+  const getCurrentLocation = () => {
+    setLocationLoading(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation({ latitude, longitude });
+          
+          // Reverse geocoding to get address
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`)
+            .then(response => response.json())
+            .then(data => {
+              const address = data.display_name;
+              setValue('location', address);
+              setValue('locationCoordinates.latitude', latitude);
+              setValue('locationCoordinates.longitude', longitude);
+              toast.success('Location captured successfully!');
+            })
+            .catch(error => {
+              console.error('Error getting address:', error);
+              // Still set coordinates even if address lookup fails
+              setValue('location', `Lat: ${latitude}, Lng: ${longitude}`);
+              setValue('locationCoordinates.latitude', latitude);
+              setValue('locationCoordinates.longitude', longitude);
+              toast.success('Location coordinates captured!');
+            })
+            .finally(() => {
+              setLocationLoading(false);
+            });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          toast.error('Failed to get location. Please enter manually.');
+          setLocationLoading(false);
+        }
+      );
+    } else {
+      toast.error('Geolocation is not supported by this browser.');
+      setLocationLoading(false);
+    }
   };
 
   const categories = [
@@ -217,15 +283,20 @@ const AdminDashboard = () => {
   const filteredRooms = rooms.filter(room => {
     const matchesSearch = room.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          room.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         room.ownerName.toLowerCase().includes(searchTerm.toLowerCase());
+                         room.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (room.location && room.location.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === 'all' || room.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesPropertyType = filterPropertyType === 'all' || room.propertyType === filterPropertyType;
+    return matchesSearch && matchesStatus && matchesPropertyType;
   });
 
   const stats = {
     total: rooms.length,
+    sale: rooms.filter(r => r.propertyType === 'sale').length,
+    rent: rooms.filter(r => r.propertyType === 'rent').length,
     available: rooms.filter(r => r.status === 'available').length,
     rented: rooms.filter(r => r.status === 'rented').length,
+    sold: rooms.filter(r => r.status === 'sold').length,
   };
 
   return (
@@ -236,7 +307,7 @@ const AdminDashboard = () => {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-sm text-gray-600">Manage your rental properties in Bhimavaram</p>
+              <p className="text-sm text-gray-600">Manage your properties in Bhimavaram</p>
             </div>
             <button 
               onClick={handleLogout} 
@@ -250,7 +321,7 @@ const AdminDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center">
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -259,7 +330,7 @@ const AdminDashboard = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Rooms</p>
+                <p className="text-sm font-medium text-gray-600">Total Properties</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
@@ -269,6 +340,34 @@ const AdminDashboard = () => {
             <div className="flex items-center">
               <div className="p-3 bg-green-100 rounded-lg">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">For Sale</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.sale}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v4a1 1 0 001 1h3v2a1 1 0 001 1h4a1 1 0 001-1v-2h3a1 1 0 001-1V7a1 1 0 00-1-1h-3V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2H4a1 1 0 00-1 1z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">For Rent</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.rent}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-3 bg-yellow-100 rounded-lg">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -287,8 +386,8 @@ const AdminDashboard = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Rented</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.rented}</p>
+                <p className="text-sm font-medium text-gray-600">Rented/Sold</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.rented + stats.sold}</p>
               </div>
             </div>
           </div>
@@ -305,7 +404,7 @@ const AdminDashboard = () => {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search rooms..."
+                  placeholder="Search properties..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
@@ -321,22 +420,45 @@ const AdminDashboard = () => {
                 <option value="all">All Status</option>
                 <option value="available">Available</option>
                 <option value="rented">Rented</option>
+                <option value="sold">Sold</option>
+              </select>
+
+              {/* Property Type Filter */}
+              <select
+                value={filterPropertyType}
+                onChange={(e) => setFilterPropertyType(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              >
+                <option value="all">All Types</option>
+                <option value="sale">For Sale</option>
+                <option value="rent">For Rent</option>
               </select>
             </div>
             
-            <button
-              onClick={openAddModal}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add New Room
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => openAddModal('sale')}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Sale Property
+              </button>
+              <button
+                onClick={() => openAddModal('rent')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Rent Property
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Rooms Grid */}
+        {/* Properties Grid */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
@@ -350,14 +472,14 @@ const AdminDashboard = () => {
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No rooms found</h3>
-            <p className="mt-1 text-sm text-gray-500">Get started by creating a new room.</p>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No properties found</h3>
+            <p className="mt-1 text-sm text-gray-500">Get started by creating a new property.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRooms.map((room) => (
               <div key={room._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
-                {/* Room Image */}
+                {/* Property Image */}
                 <div className="h-48 bg-gray-200 relative flex-shrink-0">
                   {room.images && room.images[0] && (() => {
                     const filename = room.images[0].split('/').pop().split('\\').pop();
@@ -375,19 +497,36 @@ const AdminDashboard = () => {
                     <span className={`px-2 py-1 text-xs font-bold rounded-full ${
                       room.status === 'rented' 
                         ? 'bg-red-500 text-white' 
+                        : room.status === 'sold'
+                        ? 'bg-purple-500 text-white'
                         : 'bg-green-500 text-white'
                     }`}>
-                      {room.status === 'rented' ? 'Rented' : 'Available'}
+                      {room.status === 'rented' ? 'Rented' : room.status === 'sold' ? 'Sold' : 'Available'}
+                    </span>
+                  </div>
+                  {/* Property Type Badge */}
+                  <div className="absolute top-3 left-3">
+                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                      room.propertyType === 'sale' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-blue-500 text-white'
+                    }`}>
+                      {room.propertyType === 'sale' ? 'Sale' : 'Rent'}
                     </span>
                   </div>
                 </div>
                 
-                {/* Room Info */}
+                {/* Property Info */}
                 <div className="p-4 flex-1 flex flex-col">
                   <h3 className="font-semibold text-gray-900 truncate">{room.title}</h3>
                   <p className="text-sm text-gray-600 mt-1">{room.area}</p>
+                  {room.location && (
+                    <p className="text-sm text-gray-500 mt-1">{room.location}</p>
+                  )}
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-lg font-bold text-red-600">₹{room.rent}</span>
+                    <span className="text-lg font-bold text-red-600">
+                      ₹{room.propertyType === 'sale' ? room.price : room.rent}
+                    </span>
                     {room.suitableFor && (
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                         {room.suitableFor} people
@@ -400,12 +539,12 @@ const AdminDashboard = () => {
                     <button
                       onClick={() => handleToggleStatus(room)}
                       className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                        room.status === 'rented'
+                        room.status === 'rented' || room.status === 'sold'
                           ? 'bg-green-500 text-white hover:bg-green-600'
                           : 'bg-gray-500 text-white hover:bg-gray-600'
                       }`}
                     >
-                      {room.status === 'rented' ? 'Mark Available' : 'Mark Rented'}
+                      {room.status === 'rented' || room.status === 'sold' ? 'Mark Available' : room.propertyType === 'sale' ? 'Mark Sold' : 'Mark Rented'}
                     </button>
                     <button
                       onClick={() => openEditModal(room)}
@@ -427,14 +566,14 @@ const AdminDashboard = () => {
         )}
       </div>
 
-      {/* Modal for adding/editing room */}
+      {/* Modal for adding/editing property */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900">
-                  {editRoom ? 'Edit Room' : 'Add New Room'}
+                  {editRoom ? 'Edit Property' : `Add New ${selectedPropertyType === 'sale' ? 'Sale' : 'Rent'} Property`}
                 </h3>
                 <button
                   onClick={() => { setShowModal(false); setEditRoom(null); setImagePreviews([]); }}
@@ -456,6 +595,15 @@ const AdminDashboard = () => {
                 </div>
                 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Type *</label>
+                  <select {...register('propertyType', { required: true })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    <option value="rent">For Rent</option>
+                    <option value="sale">For Sale</option>
+                  </select>
+                  {errors.propertyType && <span className="text-xs text-red-500">Property type is required</span>}
+                </div>
+                
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
                   <select {...register('category', { required: true })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500">
                     <option value="">Select Category</option>
@@ -470,6 +618,42 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Area *</label>
                   <input {...register('area', { required: true })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
                   {errors.area && <span className="text-xs text-red-500">Area is required</span>}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                  <div className="flex gap-2">
+                    <input {...register('location', { required: true })} className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Enter location or use GPS" />
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      disabled={locationLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {locationLoading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Getting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 12.414a4 4 0 10-1.414 1.414l4.243 4.243a1 1 0 001.414-1.414z" />
+                          </svg>
+                          Get Location
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {errors.location && <span className="text-xs text-red-500">Location is required</span>}
+                  {currentLocation && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Coordinates: {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
+                    </p>
+                  )}
                 </div>
                 
                 <div>
@@ -488,11 +672,19 @@ const AdminDashboard = () => {
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rent *</label>
-                  <input type="number" {...register('rent', { required: true })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
-                  {errors.rent && <span className="text-xs text-red-500">Rent is required</span>}
-                </div>
+                {propertyType === 'rent' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rent (per month) *</label>
+                    <input type="number" {...register('rent', { required: propertyType === 'rent' })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+                    {errors.rent && <span className="text-xs text-red-500">Rent is required</span>}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+                    <input type="number" {...register('price', { required: propertyType === 'sale' })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+                    {errors.price && <span className="text-xs text-red-500">Price is required</span>}
+                  </div>
+                )}
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Owner Name *</label>
@@ -501,9 +693,9 @@ const AdminDashboard = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Owner Phone *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Owner Contact *</label>
                   <input {...register('ownerPhone', { required: true })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
-                  {errors.ownerPhone && <span className="text-xs text-red-500">Owner phone is required</span>}
+                  {errors.ownerPhone && <span className="text-xs text-red-500">Owner contact is required</span>}
                 </div>
                 
                 <div>
@@ -518,7 +710,7 @@ const AdminDashboard = () => {
               </div>
               
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Images *</label>
                 <input
                   type="file"
                   multiple
@@ -546,7 +738,7 @@ const AdminDashboard = () => {
                   className="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
                   disabled={submitLoading}
                 >
-                  {submitLoading ? 'Saving...' : (editRoom ? 'Update Room' : 'Add Room')}
+                  {submitLoading ? 'Saving...' : (editRoom ? 'Update Property' : 'Add Property')}
                 </button>
                 <button
                   type="button"

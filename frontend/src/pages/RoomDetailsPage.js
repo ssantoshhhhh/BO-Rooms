@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import RoomCard from '../components/RoomCard';
+import MapPreview from '../components/MapPreview';
 
 // Compact Similar Room Card Component
 const SimilarRoomCard = ({ room }) => {
@@ -41,7 +42,7 @@ const SimilarRoomCard = ({ room }) => {
       <div className="p-3 flex-1 flex flex-col">
         <h4 className="text-sm font-bold text-gray-900 truncate mb-1" title={room.title}>{room.title}</h4>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-red-600 font-bold">₹{room.rent}</span>
+          <span className="text-xs text-red-600 font-bold">₹{room.propertyType === 'sale' ? room.price : room.rent}</span>
           <span className="text-xs text-gray-600">{room.area}</span>
         </div>
         <div className="flex items-center gap-1 mt-auto">
@@ -156,6 +157,31 @@ const RoomDetailsPage = () => {
         <div className="mb-12">
           <RoomCard room={room} onMarkRented={() => {}} />
         </div>
+
+        {/* Location Map Section */}
+        {room.locationCoordinates && room.locationCoordinates.latitude && room.locationCoordinates.longitude && (
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Location</h2>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${room.locationCoordinates.latitude},${room.locationCoordinates.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                Get Directions
+              </a>
+            </div>
+            <MapPreview 
+              latitude={room.locationCoordinates.latitude}
+              longitude={room.locationCoordinates.longitude}
+              location={room.location}
+            />
+          </div>
+        )}
 
         {/* Similar Rooms Section */}
         {similarRooms.length > 0 && (

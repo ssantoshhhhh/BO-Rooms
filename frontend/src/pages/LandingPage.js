@@ -1,58 +1,100 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, BedDouble, Building2, Building, Landmark, Layers3, Crown, Warehouse, Hotel, Flower2, Users, Users2 } from 'lucide-react';
+import { Home, DollarSign, Building2 } from 'lucide-react';
+import axios from 'axios';
+import RoomCard from '../components/RoomCard';
 
 const categories = [
-  { name: 'Studio Apartment', icon: <Home className="w-8 h-8 text-red-500" />, description: 'Single room with kitchen, bedroom, and living area combined.' },
-  { name: '1 BHK', icon: <BedDouble className="w-8 h-8 text-yellow-500" />, description: '1 Bedroom + 1 Hall + 1 Kitchen.' },
-  { name: '2 BHK', icon: <BedDouble className="w-8 h-8 text-green-500" />, description: '2 Bedrooms + 1 Hall + 1 Kitchen.' },
-  { name: '3 BHK', icon: <BedDouble className="w-8 h-8 text-blue-500" />, description: '3 Bedrooms + 1 Hall + 1 Kitchen.' },
-  { name: 'Duplex Apartment', icon: <Layers3 className="w-8 h-8 text-pink-500" />, description: 'Two floors connected by an internal staircase, in a single apartment.' },
-  { name: 'Triplex Apartment', icon: <Layers3 className="w-8 h-8 text-purple-500" />, description: 'Similar to duplex but with three levels.' },
-  { name: 'Penthouse', icon: <Crown className="w-8 h-8 text-orange-500" />, description: 'Luxurious apartment on the top floor, usually with a terrace and great views.' },
-  { name: 'Loft Apartment', icon: <Warehouse className="w-8 h-8 text-teal-500" />, description: 'Open layout with high ceilings; often in converted warehouses.' },
-  { name: 'Serviced Apartment', icon: <Hotel className="w-8 h-8 text-indigo-500" />, description: 'Fully furnished, hotel-like apartment with services like housekeeping.' },
-  { name: 'Garden Apartment', icon: <Flower2 className="w-8 h-8 text-lime-500" />, description: 'Located on the ground floor with direct access to a garden or backyard.' },
-  { name: 'Condominium (Condo)', icon: <Building2 className="w-8 h-8 text-amber-500" />, description: 'Individually owned units in a building with shared facilities (like a gym or pool).' },
-  { name: 'Co-living Space', icon: <Users2 className="w-8 h-8 text-cyan-500" />, description: 'Shared living space (like hostels or PGs) for students or young professionals.' }
+  { 
+    name: 'For Sale', 
+    icon: <DollarSign className="w-8 h-8 text-green-500" />, 
+    description: 'Properties available for purchase',
+    type: 'sale'
+  },
+  { 
+    name: 'For Rent', 
+    icon: <Home className="w-8 h-8 text-blue-500" />, 
+    description: 'Properties available for rent',
+    type: 'rent'
+  }
 ];
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const [latestRooms, setLatestRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLatestRooms = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/rooms');
+        // Get the latest 6 rooms
+        const latest = response.data.slice(0, 6);
+        setLatestRooms(latest);
+      } catch (error) {
+        console.error('Error fetching latest rooms:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLatestRooms();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center">
-      {/* Banner */}
-      <div className="w-full bg-red-600 py-8 flex flex-col items-center shadow-md">
-        <img src="./bo.jpeg" alt="Company Banner" className="h-20 mb-2" />
-        <h1 className="text-4xl font-extrabold text-white tracking-wide drop-shadow">Bhimavaram Rooms</h1>
-      </div>
-      {/* Categories Grid */}
-      <div className="mt-10 w-full max-w-5xl px-4">
-        <h2 className="text-2xl font-bold text-red-600 mb-6 text-center">Categories</h2>
-        <div className="grid grid-cols-3 gap-12 justify-items-center">
-          {categories.slice(0, 9).map((cat) => (
-            <div
-              key={cat.name}
-              className="flex flex-col items-center cursor-pointer group"
-              onClick={() => navigate(`/category/${encodeURIComponent(cat.name)}`)}
-            >
-              <div
-                className="bg-white rounded-full shadow-md flex items-center justify-center w-20 h-20 mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:ring-4 group-hover:ring-red-200 group-hover:shadow-xl"
-                style={{ overflow: 'hidden' }}
-              >
-                {cat.icon}
-              </div>
-              <span className="text-center text-base font-medium text-gray-800 transition-colors duration-300 group-hover:text-red-600">{cat.name}</span>
-            </div>
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      {/* Header */}
+      <div className="w-full bg-white shadow-sm border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-center">
+            <Building2 className="w-8 h-8 text-red-600 mr-3" />
+            <h1 className="text-3xl font-bold text-gray-900">Bhimavaram Rooms</h1>
+          </div>
         </div>
-        <div className="flex justify-center mt-10">
-          <button
-            className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition text-lg font-semibold"
-            onClick={() => navigate('/room-categories')}
-          >
-            Know About These !
-          </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Categories Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Find Your Perfect Property</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {categories.map((cat) => (
+              <div
+                key={cat.name}
+                className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group border border-gray-100"
+                onClick={() => navigate(`/category/${encodeURIComponent(cat.name)}`)}
+              >
+                <div className="p-8 text-center">
+                  <div className="bg-gray-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                    {cat.icon}
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{cat.name}</h3>
+                  <p className="text-gray-600">{cat.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* New Updates Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">New Updates</h2>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            </div>
+          ) : latestRooms.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {latestRooms.map((room) => (
+                <RoomCard key={room._id} room={room} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">No rooms available at the moment.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

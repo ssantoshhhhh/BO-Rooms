@@ -27,10 +27,10 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
     >
       {/* Subtle background pattern */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{background: 'radial-gradient(circle at 80% 20%, #ffe4e6 0%, transparent 70%), radial-gradient(circle at 20% 80%, #f0fdfa 0%, transparent 70%)'}} />
-      {/* Rented badge */}
-      {room.status === 'rented' && (
+      {/* Status badge */}
+      {(room.status === 'rented' || room.status === 'sold') && (
         <span className="absolute top-4 right-4 z-20 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-4 py-1 rounded-full font-bold shadow-lg tracking-wide animate-bounce backdrop-blur-md border border-white/30" style={{boxShadow:'0 0 16px 2px #f472b6'}}>
-          Rented
+          {room.status === 'rented' ? 'Rented' : 'Sold'}
         </span>
       )}
       {/* Swiper image carousel with animated overlay */}
@@ -56,11 +56,18 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
             })}
           </Swiper>
         )}
-        {/* Category badge with glassmorphism */}
+        {/* Property Type badge */}
         <span className="absolute left-4 top-4 z-20 bg-white/60 text-red-600 text-xs px-3 py-1 rounded-full font-semibold shadow backdrop-blur-md border border-white/30 flex items-center gap-1">
           <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 7V4a2 2 0 012-2h3m6 0h3a2 2 0 012 2v3m0 6v3a2 2 0 01-2 2h-3m-6 0H6a2 2 0 01-2-2v-3" /></svg>
-          {room.flatType}
+          {room.propertyType === 'sale' ? 'Sale' : 'Rent'}
         </span>
+        {/* Category badge */}
+        {room.flatType && (
+          <span className="absolute left-4 top-12 z-20 bg-white/60 text-blue-600 text-xs px-3 py-1 rounded-full font-semibold shadow backdrop-blur-md border border-white/30 flex items-center gap-1">
+            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 7V4a2 2 0 012-2h3m6 0h3a2 2 0 012 2v3m0 6v3a2 2 0 01-2 2h-3m-6 0H6a2 2 0 01-2-2v-3" /></svg>
+            {room.flatType}
+          </span>
+        )}
       </div>
       {/* Info section with glassmorphism */}
       <div className="relative flex flex-col gap-3 px-6 py-5 z-10 bg-white/70 backdrop-blur-md rounded-b-3xl flex-1 flex flex-col">
@@ -72,12 +79,18 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
         <div className="flex flex-wrap gap-2 items-center mb-1">
           <span className="bg-gradient-to-r from-pink-100 to-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1">
             <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" /></svg>
-            ₹{room.rent} / month
+            ₹{room.propertyType === 'sale' ? room.price : room.rent} {room.propertyType === 'sale' ? '' : '/ month'}
           </span>
           <span className="bg-white/80 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold shadow-sm flex items-center gap-1">
             <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 12.414a4 4 0 10-1.414 1.414l4.243 4.243a1 1 0 001.414-1.414z" /></svg>
             {room.area}
           </span>
+          {room.location && (
+            <span className="bg-white/80 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold shadow-sm flex items-center gap-1">
+              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 12.414a4 4 0 10-1.414 1.414l4.243 4.243a1 1 0 001.414-1.414z" /></svg>
+              {room.location}
+            </span>
+          )}
           <span className="bg-white/80 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold shadow-sm flex items-center gap-1">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 7v4a1 1 0 001 1h3v2a1 1 0 001 1h4a1 1 0 001-1v-2h3a1 1 0 001-1V7a1 1 0 00-1-1h-3V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2H4a1 1 0 00-1 1z" /></svg>
             {room.category}
@@ -115,6 +128,20 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.52 3.48A12.07 12.07 0 0012 0C5.37 0 0 5.37 0 12a11.93 11.93 0 001.64 6.06L0 24l6.18-1.62A12.07 12.07 0 0012 24c6.63 0 12-5.37 12-12 0-3.2-1.25-6.21-3.48-8.52zM12 22c-1.61 0-3.18-.31-4.65-.92l-.33-.14-3.67.96.98-3.58-.15-.34A9.94 9.94 0 012 12c0-5.52 4.48-10 10-10s10 4.48 10 10-4.48 10-10 10zm5.2-7.8c-.28-.14-1.65-.81-1.9-.9-.25-.09-.43-.14-.61.14-.18.28-.7.9-.86 1.08-.16.18-.32.2-.6.07-.28-.14-1.18-.44-2.25-1.4-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.34.42-.51.14-.17.18-.29.28-.48.09-.19.05-.36-.02-.5-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.62-.47-.16-.01-.36-.01-.56-.01-.19 0-.5.07-.76.34-.26.27-1 1-.97 2.43.03 1.43 1.04 2.81 1.19 3 .15.19 2.05 3.13 5.01 4.27.7.3 1.25.48 1.68.61.71.23 1.36.2 1.87.12.57-.09 1.65-.67 1.89-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.19-.53-.33z" /></svg>
               WhatsApp
           </a>
+          )}
+          {room.locationCoordinates && room.locationCoordinates.latitude && room.locationCoordinates.longitude && (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${room.locationCoordinates.latitude},${room.locationCoordinates.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 active:scale-95"
+              onClick={e => e.stopPropagation()}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              Get Directions
+            </a>
           )}
         </div>
         <div className="flex flex-col gap-1 mt-4 text-xs text-gray-500 mt-auto">

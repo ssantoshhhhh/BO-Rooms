@@ -10,8 +10,15 @@ const roomSchema = new mongoose.Schema({
   category: { type: String, required: true }, // e.g., flat, penthouse
   area: { type: String, required: true },
   flatType: { type: String }, // e.g., 2BHK, 3BHK
-  rent: { type: Number, required: true },
-  status: { type: String, enum: ['available', 'rented'], default: 'available' },
+  rent: { type: Number, required: function() { return this.propertyType === 'rent'; } }, // For rent properties
+  price: { type: Number, required: function() { return this.propertyType === 'sale'; } }, // For sale properties
+  location: { type: String, required: true }, // Location of the property
+  locationCoordinates: {
+    latitude: { type: Number },
+    longitude: { type: Number }
+  }, // GPS coordinates for the property
+  propertyType: { type: String, enum: ['sale', 'rent'], required: true }, // sale or rent
+  status: { type: String, enum: ['available', 'rented', 'sold'], default: 'available' },
   suitableFor: { type: Number, required: false, default: null }, // Number of people suitable for
   createdAt: { type: Date, default: Date.now },
 });

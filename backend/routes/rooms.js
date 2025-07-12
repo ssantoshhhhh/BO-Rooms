@@ -40,6 +40,36 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
       roomData.rent = Number(roomData.rent);
     }
     
+    // Convert price to number if it exists
+    if (roomData.price) {
+      roomData.price = Number(roomData.price);
+    }
+    
+    // Ensure the correct field is provided based on property type
+    if (roomData.propertyType === 'sale') {
+      if (!roomData.price) {
+        return res.status(400).json({ message: 'Price is required for sale properties' });
+      }
+      // Remove rent field for sale properties
+      delete roomData.rent;
+    } else if (roomData.propertyType === 'rent') {
+      if (!roomData.rent) {
+        return res.status(400).json({ message: 'Rent is required for rental properties' });
+      }
+      // Remove price field for rent properties
+      delete roomData.price;
+    }
+    
+    // Handle location coordinates
+    if (roomData['locationCoordinates.latitude'] && roomData['locationCoordinates.longitude']) {
+      roomData.locationCoordinates = {
+        latitude: Number(roomData['locationCoordinates.latitude']),
+        longitude: Number(roomData['locationCoordinates.longitude'])
+      };
+      delete roomData['locationCoordinates.latitude'];
+      delete roomData['locationCoordinates.longitude'];
+    }
+    
     const images = req.files ? req.files.map(file => file.path) : [];
     const room = new Room({ ...roomData, images });
     await room.save();
@@ -103,6 +133,36 @@ router.put('/:id', auth, upload.array('images', 5), async (req, res) => {
     // Convert rent to number if it exists
     if (update.rent) {
       update.rent = Number(update.rent);
+    }
+    
+    // Convert price to number if it exists
+    if (update.price) {
+      update.price = Number(update.price);
+    }
+    
+    // Ensure the correct field is provided based on property type
+    if (update.propertyType === 'sale') {
+      if (!update.price) {
+        return res.status(400).json({ message: 'Price is required for sale properties' });
+      }
+      // Remove rent field for sale properties
+      delete update.rent;
+    } else if (update.propertyType === 'rent') {
+      if (!update.rent) {
+        return res.status(400).json({ message: 'Rent is required for rental properties' });
+      }
+      // Remove price field for rent properties
+      delete update.price;
+    }
+    
+    // Handle location coordinates
+    if (update['locationCoordinates.latitude'] && update['locationCoordinates.longitude']) {
+      update.locationCoordinates = {
+        latitude: Number(update['locationCoordinates.latitude']),
+        longitude: Number(update['locationCoordinates.longitude'])
+      };
+      delete update['locationCoordinates.latitude'];
+      delete update['locationCoordinates.longitude'];
     }
     
     // Only update images if new files are uploaded
