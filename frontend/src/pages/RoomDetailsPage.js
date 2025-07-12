@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import RoomCard from '../components/RoomCard';
 import MapPreview from '../components/MapPreview';
+import Navbar from '../components/Navbar';
 
 // Compact Similar Room Card Component
 const SimilarRoomCard = ({ room }) => {
@@ -77,6 +78,28 @@ const RoomDetailsPage = () => {
   const [similarRooms, setSimilarRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const openMapsApp = (e) => {
+    e.stopPropagation();
+    if (!room?.locationCoordinates || !room.locationCoordinates.latitude || !room.locationCoordinates.longitude) {
+      return;
+    }
+
+    const { latitude, longitude } = room.locationCoordinates;
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    // Detect platform and open appropriate maps app
+    if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) {
+      // iOS - try Apple Maps first, fallback to Google Maps
+      window.open(`https://maps.apple.com/?daddr=${latitude},${longitude}&dirflg=d`, '_blank');
+    } else if (userAgent.includes('android')) {
+      // Android - try Google Maps
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`, '_blank');
+    } else {
+      // Desktop - default to Google Maps
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`, '_blank');
+    }
+  };
+
   useEffect(() => {
     const fetchRoom = async () => {
       setLoading(true);
@@ -127,6 +150,7 @@ const RoomDetailsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50">
+      <Navbar />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -163,17 +187,15 @@ const RoomDetailsPage = () => {
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Location</h2>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${room.locationCoordinates.latitude},${room.locationCoordinates.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-300"
+              <button
+                onClick={openMapsApp}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all focus:outline-none focus:ring-2 focus:ring-purple-300"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 12.414a4 4 0 10-1.414 1.414l4.243 4.243a1 1 0 001.414-1.414z" />
                 </svg>
-                Get Directions
-              </a>
+                Get Location
+              </button>
             </div>
             <MapPreview 
               latitude={room.locationCoordinates.latitude}
