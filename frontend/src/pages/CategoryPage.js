@@ -23,10 +23,21 @@ const CategoryPage = () => {
     setLoading(true);
     try {
       const decodedCategory = decodeURIComponent(categoryName);
-      const params = { category: decodedCategory };
+      let params = {};
+      
+      // Handle special categories (For Sale, For Rent)
+      if (decodedCategory === 'For Sale') {
+        params.propertyType = 'sale';
+      } else if (decodedCategory === 'For Rent') {
+        params.propertyType = 'rent';
+      } else {
+        params.category = decodedCategory;
+      }
+      
       if (filters.area) params.area = filters.area;
       if (filters.rent) params.maxRent = filters.rent;
       if (filters.suitableFor) params.suitableFor = filters.suitableFor;
+      
       const res = await axios.get('http://localhost:8000/api/rooms', { params });
       setRooms(res.data);
       // Extract unique areas for filter dropdowns
@@ -208,7 +219,7 @@ const CategoryPage = () => {
                 </div>
               </div>
               
-              {/* Rent Filter */}
+              {/* Rent/Price Filter */}
               <div className="group">
                 <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                   <div className="p-1.5 bg-green-100 rounded-lg">
@@ -216,7 +227,7 @@ const CategoryPage = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                     </svg>
                   </div>
-                  Max Rent
+                  Max {decodeURIComponent(categoryName) === 'For Sale' ? 'Price' : 'Rent'}
                 </label>
                 <div className="relative">
                   <select
@@ -224,11 +235,22 @@ const CategoryPage = () => {
                     value={filters.rent}
                     onChange={e => setFilters(f => ({ ...f, rent: e.target.value }))}
                   >
-                    <option value="" className="text-gray-500">Any Rent</option>
-                    <option value="5000" className="text-gray-700">Up to ₹5,000</option>
-                    <option value="10000" className="text-gray-700">Up to ₹10,000</option>
-                    <option value="15000" className="text-gray-700">Up to ₹15,000</option>
-                    <option value="20000" className="text-gray-700">Up to ₹20,000</option>
+                    <option value="" className="text-gray-500">Any {decodeURIComponent(categoryName) === 'For Sale' ? 'Price' : 'Rent'}</option>
+                    {decodeURIComponent(categoryName) === 'For Sale' ? (
+                      <>
+                        <option value="500000" className="text-gray-700">Up to ₹5,00,000</option>
+                        <option value="1000000" className="text-gray-700">Up to ₹10,00,000</option>
+                        <option value="2000000" className="text-gray-700">Up to ₹20,00,000</option>
+                        <option value="5000000" className="text-gray-700">Up to ₹50,00,000</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="5000" className="text-gray-700">Up to ₹5,000</option>
+                        <option value="10000" className="text-gray-700">Up to ₹10,000</option>
+                        <option value="15000" className="text-gray-700">Up to ₹15,000</option>
+                        <option value="20000" className="text-gray-700">Up to ₹20,000</option>
+                      </>
+                    )}
                   </select>
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <svg className="w-5 h-5 text-gray-400 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">

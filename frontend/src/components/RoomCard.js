@@ -85,11 +85,17 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
             <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 12.414a4 4 0 10-1.414 1.414l4.243 4.243a1 1 0 001.414-1.414z" /></svg>
             {room.area}
           </span>
-          {room.location && (
-            <span className="bg-white/80 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold shadow-sm flex items-center gap-1">
+          {room.location && room.locationCoordinates && room.locationCoordinates.latitude && room.locationCoordinates.longitude && (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${room.locationCoordinates.latitude},${room.locationCoordinates.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white/80 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold shadow-sm flex items-center gap-1 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+              onClick={e => e.stopPropagation()}
+            >
               <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 12.414a4 4 0 10-1.414 1.414l4.243 4.243a1 1 0 001.414-1.414z" /></svg>
-              {room.location}
-            </span>
+              Get Location
+            </a>
           )}
           <span className="bg-white/80 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold shadow-sm flex items-center gap-1">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 7v4a1 1 0 001 1h3v2a1 1 0 001 1h4a1 1 0 001-1v-2h3a1 1 0 001-1V7a1 1 0 00-1-1h-3V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2H4a1 1 0 00-1 1z" /></svg>

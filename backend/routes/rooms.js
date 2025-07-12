@@ -83,15 +83,25 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
 // Get all rooms (with optional filters)
 router.get('/', async (req, res) => {
   try {
-    const { category, area, flatType, minRent, maxRent, status, suitableFor } = req.query;
+    const { category, area, flatType, minRent, maxRent, status, suitableFor, propertyType } = req.query;
     let filter = {};
     if (category) filter.category = category;
+    if (propertyType) filter.propertyType = propertyType;
     if (area) filter.area = area;
     if (flatType) filter.flatType = flatType;
     if (status) filter.status = status;
-    if (minRent || maxRent) filter.rent = {};
-    if (minRent) filter.rent.$gte = Number(minRent);
-    if (maxRent) filter.rent.$lte = Number(maxRent);
+    
+    // Handle rent/price filtering based on property type
+    if (propertyType === 'sale') {
+      if (minRent || maxRent) filter.price = {};
+      if (minRent) filter.price.$gte = Number(minRent);
+      if (maxRent) filter.price.$lte = Number(maxRent);
+    } else {
+      if (minRent || maxRent) filter.rent = {};
+      if (minRent) filter.rent.$gte = Number(minRent);
+      if (maxRent) filter.rent.$lte = Number(maxRent);
+    }
+    
     if (suitableFor) filter.suitableFor = Number(suitableFor);
     const rooms = await Room.find(filter).sort({ createdAt: -1 });
     res.json(rooms);
