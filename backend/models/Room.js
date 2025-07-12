@@ -12,7 +12,7 @@ const roomSchema = new mongoose.Schema({
   flatType: { type: String }, // e.g., 2BHK, 3BHK
   rent: { type: Number, required: true },
   status: { type: String, enum: ['available', 'rented'], default: 'available' },
-  suitableFor: { type: Number, required: false }, // Number of people suitable for
+  suitableFor: { type: Number, required: false, default: null }, // Number of people suitable for
   createdAt: { type: Date, default: Date.now },
 });
 

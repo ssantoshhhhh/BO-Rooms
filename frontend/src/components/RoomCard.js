@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
   const navigate = useNavigate();
@@ -11,14 +12,16 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
     try {
       await axios.patch(`http://localhost:8000/api/rooms/${room._id}/rented`);
       if (onMarkRented) onMarkRented(room._id);
+      toast.success('Room marked as rented successfully!');
     } catch (err) {
-      alert('Failed to mark as rented');
+      console.error('Error marking room as rented:', err);
+      toast.error('Failed to mark room as rented');
     }
   };
 
   return (
     <div
-      className="group relative bg-white/80 backdrop-blur-md rounded-3xl p-0 mb-8 border-2 border-transparent hover:border-gradient-to-r hover:from-red-400 hover:to-pink-400 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden transform hover:scale-[1.03] hover:ring-2 hover:ring-pink-200"
+      className="group relative bg-white/80 backdrop-blur-md rounded-3xl p-0 mb-8 border-2 border-transparent hover:border-gradient-to-r hover:from-red-400 hover:to-pink-400 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden transform hover:scale-[1.03] hover:ring-2 hover:ring-pink-200 h-full flex flex-col"
       style={{ minHeight: 380, boxShadow: '0 4px 32px 0 rgba(0,0,0,0.10), 0 1.5px 6px 0 rgba(255,0,80,0.08)' }}
       onClick={() => navigate(`/room/${room._id}`)}
     >
@@ -31,7 +34,7 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
         </span>
       )}
       {/* Swiper image carousel with animated overlay */}
-      <div className="relative w-full h-56 bg-red-50 flex items-center justify-center overflow-hidden rounded-t-3xl">
+      <div className="relative w-full h-56 bg-red-50 flex items-center justify-center overflow-hidden rounded-t-3xl flex-shrink-0">
         {room.images && room.images.length > 0 && (
           <Swiper spaceBetween={10} slidesPerView={1} className="w-full h-full">
             {room.images.map((img, idx) => {
@@ -40,11 +43,11 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
               return (
                 <SwiperSlide key={idx}>
                   <div className="relative w-full h-56">
-                    <img
-                      src={imageUrl}
-                      alt="Room"
+                  <img
+                    src={imageUrl}
+                    alt="Room"
                       className="w-full h-56 object-cover rounded-b-none rounded-t-3xl bg-gray-200 transition-transform duration-500 group-hover:scale-110"
-                    />
+                  />
                     {/* Animated gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded-t-3xl transition-all duration-500 group-hover:from-black/60" />
                   </div>
@@ -60,7 +63,7 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
         </span>
       </div>
       {/* Info section with glassmorphism */}
-      <div className="relative flex flex-col gap-3 px-6 py-5 z-10 bg-white/70 backdrop-blur-md rounded-b-3xl">
+      <div className="relative flex flex-col gap-3 px-6 py-5 z-10 bg-white/70 backdrop-blur-md rounded-b-3xl flex-1 flex flex-col">
         <h3 className="text-2xl font-extrabold text-gray-900 mb-1 truncate tracking-tight leading-tight" title={room.title} style={{letterSpacing: '-0.01em'}}>{room.title}</h3>
         {/* Description */}
         {room.description && (
@@ -111,10 +114,10 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.52 3.48A12.07 12.07 0 0012 0C5.37 0 0 5.37 0 12a11.93 11.93 0 001.64 6.06L0 24l6.18-1.62A12.07 12.07 0 0012 24c6.63 0 12-5.37 12-12 0-3.2-1.25-6.21-3.48-8.52zM12 22c-1.61 0-3.18-.31-4.65-.92l-.33-.14-3.67.96.98-3.58-.15-.34A9.94 9.94 0 012 12c0-5.52 4.48-10 10-10s10 4.48 10 10-4.48 10-10 10zm5.2-7.8c-.28-.14-1.65-.81-1.9-.9-.25-.09-.43-.14-.61.14-.18.28-.7.9-.86 1.08-.16.18-.32.2-.6.07-.28-.14-1.18-.44-2.25-1.4-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.34.42-.51.14-.17.18-.29.28-.48.09-.19.05-.36-.02-.5-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.62-.47-.16-.01-.36-.01-.56-.01-.19 0-.5.07-.76.34-.26.27-1 1-.97 2.43.03 1.43 1.04 2.81 1.19 3 .15.19 2.05 3.13 5.01 4.27.7.3 1.25.48 1.68.61.71.23 1.36.2 1.87.12.57-.09 1.65-.67 1.89-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.19-.53-.33z" /></svg>
               WhatsApp
-            </a>
+          </a>
           )}
         </div>
-        <div className="flex flex-col gap-1 mt-4 text-xs text-gray-500">
+        <div className="flex flex-col gap-1 mt-4 text-xs text-gray-500 mt-auto">
           <div className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             Owner: {room.ownerName}
@@ -138,7 +141,7 @@ const RoomCard = ({ room, onMarkRented, relatedRooms }) => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" /><circle cx="12" cy="12" r="10" /></svg>
               Posted: {new Date(room.createdAt).toLocaleDateString()}
             </div>
-          )}
+        )}
         </div>
       </div>
     </div>

@@ -19,11 +19,33 @@ const upload = multer({ storage });
 // Create a room (admin only)
 router.post('/', auth, upload.array('images', 5), async (req, res) => {
   try {
-    const images = req.files.map(file => file.path);
-    const room = new Room({ ...req.body, images });
+    let roomData = { ...req.body };
+    
+    // Clean up the room data to handle null/empty values
+    Object.keys(roomData).forEach(key => {
+      if (roomData[key] === 'null' || roomData[key] === '' || roomData[key] === null) {
+        delete roomData[key]; // Remove null/empty values
+      }
+    });
+    
+    // Convert suitableFor to number if it exists and is not empty
+    if (roomData.suitableFor && roomData.suitableFor !== 'null' && roomData.suitableFor !== '') {
+      roomData.suitableFor = Number(roomData.suitableFor);
+    } else {
+      delete roomData.suitableFor; // Remove if null/empty
+    }
+    
+    // Convert rent to number if it exists
+    if (roomData.rent) {
+      roomData.rent = Number(roomData.rent);
+    }
+    
+    const images = req.files ? req.files.map(file => file.path) : [];
+    const room = new Room({ ...roomData, images });
     await room.save();
     res.status(201).json(room);
   } catch (err) {
+    console.error('Error creating room:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -62,14 +84,37 @@ router.get('/:id', async (req, res) => {
 // Update a room (admin only)
 router.put('/:id', auth, upload.array('images', 5), async (req, res) => {
   try {
-    let update = req.body;
+    let update = { ...req.body };
+    
+    // Clean up the update object to handle null/empty values
+    Object.keys(update).forEach(key => {
+      if (update[key] === 'null' || update[key] === '' || update[key] === null) {
+        delete update[key]; // Remove null/empty values
+      }
+    });
+    
+    // Convert suitableFor to number if it exists and is not empty
+    if (update.suitableFor && update.suitableFor !== 'null' && update.suitableFor !== '') {
+      update.suitableFor = Number(update.suitableFor);
+    } else {
+      delete update.suitableFor; // Remove if null/empty
+    }
+    
+    // Convert rent to number if it exists
+    if (update.rent) {
+      update.rent = Number(update.rent);
+    }
+    
+    // Only update images if new files are uploaded
     if (req.files && req.files.length > 0) {
       update.images = req.files.map(file => file.path);
     }
+    
     const room = await Room.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!room) return res.status(404).json({ message: 'Room not found' });
     res.json(room);
   } catch (err) {
+    console.error('Error updating room:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
