@@ -63,13 +63,21 @@ const RoomCard = ({ room, onMarkRented, minimal }) => {
   const handleShare = (e) => {
     e.stopPropagation();
     const url = window.location.origin + `/room/${room._id}`;
+    navigator.clipboard.writeText(url);
+    if (typeof toast === 'function') toast.success('URL copied to clipboard!');
     if (navigator.share) {
-      navigator.share({ title: room.title, url });
-    } else {
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      navigator.share({
+        title: room.title || 'Room Listing',
+        text: `Check out this room: ${room.title}`,
+        url,
+      }).catch((err) => {
+        if (err.name !== 'AbortError') {
+          if (typeof toast === 'function') toast('Sharing failed. Please try again.');
+        }
+      });
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const openMapsApp = (e) => {

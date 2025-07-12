@@ -3,6 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import toast, { Toaster } from 'react-hot-toast';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
+function MapClickPicker({ onPick }) {
+  useMapEvents({
+    click(e) {
+      onPick(e.latlng);
+    },
+  });
+  return null;
+}
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -21,6 +32,9 @@ const AdminDashboard = () => {
   const imagesInputRef = useRef();
   const [imagePreviews, setImagePreviews] = useState([]);
   const [showStats, setShowStats] = useState(false); // Add this state
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [pickedCoords, setPickedCoords] = useState(null);
+  const [pickedAddress, setPickedAddress] = useState('');
 
   const propertyType = watch('propertyType', 'rent');
 
@@ -299,6 +313,13 @@ const AdminDashboard = () => {
     rented: rooms.filter(r => r.status === 'rented').length,
     sold: rooms.filter(r => r.status === 'sold').length,
   };
+
+  // Reverse geocode coordinates to address
+  async function reverseGeocode(lat, lng) {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    const data = await res.json();
+    return data.display_name || '';
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -659,6 +680,16 @@ const AdminDashboard = () => {
                         </>
                       )}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMapPicker(true)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 119.5 9 2.5 2.5 0 0112 11.5z" />
+                      </svg>
+                      Pick Location on Map
+                    </button>
                   </div>
                   {errors.location && <span className="text-xs text-red-500">Location is required</span>}
                   {currentLocation && (
@@ -761,6 +792,54 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {showMapPicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg relative">
+            <button onClick={() => setShowMapPicker(false)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">✕</button>
+            <h3 className="text-lg font-bold mb-4">Pick Location on Map</h3>
+            <div className="h-80 w-full rounded-lg border border-gray-200 overflow-hidden mb-4">
+              <MapContainer center={[16.5449, 81.5212]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+                {pickedCoords && <Marker position={[pickedCoords.lat, pickedCoords.lng]} />}
+                <MapClickPicker onPick={async (latlng) => {
+                  setPickedCoords(latlng);
+                  setPickedAddress('Loading...');
+                  const addr = await reverseGeocode(latlng.lat, latlng.lng);
+                  setPickedAddress(addr);
+                }} />
+              </MapContainer>
+            </div>
+            {pickedCoords && (
+              <div className="mb-4 text-sm text-gray-700">
+                <div><b>Coordinates:</b> {pickedCoords.lat.toFixed(6)}, {pickedCoords.lng.toFixed(6)}</div>
+                <div><b>Address:</b> {pickedAddress}</div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowMapPicker(false)} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                disabled={!pickedCoords}
+                onClick={() => {
+                  if (pickedCoords) {
+                    setValue('location', pickedAddress || `Lat: ${pickedCoords.lat}, Lng: ${pickedCoords.lng}`);
+                    setValue('locationCoordinates.latitude', pickedCoords.lat);
+                    setValue('locationCoordinates.longitude', pickedCoords.lng);
+                    setCurrentLocation({ latitude: pickedCoords.lat, longitude: pickedCoords.lng });
+                    setShowMapPicker(false);
+                    toast.success('Location set from map!');
+                  }
+                }}
+              >
+                Set Location
+              </button>
+            </div>
           </div>
         </div>
       )}
